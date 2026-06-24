@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: intelliglove
+      POSTGRES_USER: intelliglove
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - intelliglove_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intelliglove -d intelliglove"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ml:
+    build: ./python_ml_service
+    environment:
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
+      MODEL_DIR: /models
+    ports:
+      - "8080:8080"
+    volumes:
+      # Root models/ directory mounted read-only so the ML service can load artifacts.
+      - ./models:/models:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      APP_ENV: development
+      DEVELOPMENT_AUTH_BYPASS: ${DEVELOPMENT_AUTH_BYPASS:-true}
+      DATABASE_URL: postgresql+psycopg://intelliglove:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/intelliglove
+      FIREBASE_PROJECT_ID: intelligent-glove-asl-33-da1aa
+      # Backend reaches the ML service by Compose service name (Issue 4).
+      ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml:8080}
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY:-}
+      TRANSLATION_POLL_INTERVAL: ${TRANSLATION_POLL_INTERVAL:-1.0}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin:
+    build:
+      context: ./admin_dashboard
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        VITE_DEVELOPMENT_AUTH_BYPASS: ${DEVELOPMENT_AUTH_BYPASS:-true}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  intelliglove_postgres:
