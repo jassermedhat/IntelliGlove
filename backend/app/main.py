@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 from .config import Settings
 from .database import create_database
 from .errors import install_error_handlers
+from .network_config import best_ip_for_client, detect_lan_ip, log_startup_urls
 from .firebase_identity import FirebaseIdentity, create_firebase_identity
 from .ml_client import MlClient, MlClientProtocol
 from .auth_routes import router as auth_router
@@ -47,6 +48,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        log_startup_urls()
         # Schema creation is migration-owned. This only proves connectivity.
         # A DB outage at startup must NOT crash the process — log and continue so
         # the API can come up and return controlled 503s (see the OperationalError
@@ -134,6 +136,18 @@ def create_app(
                 "version": "2.0.0",
                 "database": "postgresql",
             }
+        }
+
+    @app.get("/__config", tags=["system"])
+    def config(request: Request) -> dict[str, object]:
+        client_ip = request.client.host if request.client else None
+        lan_ip = best_ip_for_client(client_ip) if client_ip else detect_lan_ip()
+        port = request.url.port or 8000
+        base = f"http://{lan_ip}:{port}"
+        return {
+            "base_url": base,
+            "docs_url": f"{base}/docs",
+            "status": "ok",
         }
 
     app.include_router(auth_router, prefix=settings.api_prefix)

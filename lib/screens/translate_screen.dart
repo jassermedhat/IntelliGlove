@@ -52,27 +52,16 @@ class _TranslateScreenState extends State<TranslateScreen> {
     String ttsLocale,
   ) async {
     final controller = TranslationControllerScope.of(ctx);
-    final text = controller.text.trim();
 
-    if (controller.isSpeaking) {
-      await controller.stopSpeaking();
+    if (controller.isAutoSpeakActive) {
+      await controller.stopAutoSpeak();
       return;
     }
-    if (text.isEmpty) {
-      if (!isConnected) {
-        _showPairDeviceAction(ctx);
-      } else {
-        toast.info(description: 'No translated text to speak yet.');
-      }
+    if (!isConnected) {
+      _showPairDeviceAction(ctx);
       return;
     }
-    final spoken = await controller.speak(ttsLocale);
-    if (!spoken && ctx.mounted) {
-      toast.error(
-        title: 'Text-to-speech unavailable',
-        description: controller.errorMessage,
-      );
-    }
+    await controller.startAutoSpeak();
   }
 
   Future<void> _handleRepeat(BuildContext ctx, String ttsLocale) async {
@@ -387,7 +376,7 @@ class _TranslateScreenState extends State<TranslateScreen> {
                           t: t,
                           isDark: isDark,
                           text: controller.text,
-                          isSpeaking: controller.isSpeaking,
+                          isAutoSpeakActive: controller.isAutoSpeakActive,
                           isConnected: isLive,
                           isRtl: isRtl,
                           onToggleSpeak: () => _handleToggleSpeak(
@@ -562,7 +551,7 @@ class _TranslationOutputCard extends StatelessWidget {
   final AppColorTokens t;
   final bool isDark;
   final String text;
-  final bool isSpeaking;
+  final bool isAutoSpeakActive;
   final bool isConnected;
   final bool isRtl;
   final VoidCallback onToggleSpeak;
@@ -572,7 +561,7 @@ class _TranslationOutputCard extends StatelessWidget {
     required this.t,
     required this.isDark,
     required this.text,
-    required this.isSpeaking,
+    required this.isAutoSpeakActive,
     required this.isConnected,
     required this.isRtl,
     required this.onToggleSpeak,
@@ -744,18 +733,18 @@ class _TranslationOutputCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: AppButton(
-                        variant: isSpeaking
+                        variant: isAutoSpeakActive
                             ? AppButtonVariant.secondary
                             : AppButtonVariant.accent,
                         size: AppButtonSize.sm,
                         icon: Icon(
-                          isSpeaking
+                          isAutoSpeakActive
                               ? Icons.stop_rounded
                               : Icons.volume_up_rounded,
                           size: 16,
                         ),
                         onPressed: onToggleSpeak,
-                        child: Text(isSpeaking ? 'Stop' : 'Speak'),
+                        child: Text(isAutoSpeakActive ? 'Stop' : 'Speak'),
                       ),
                     ),
                     const SizedBox(width: 10),

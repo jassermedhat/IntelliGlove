@@ -35,6 +35,7 @@ class TranslationController extends ChangeNotifier {
   bool _connected = false;
   bool _sessionActive = false;
   bool _listening = false;
+  bool _autoSpeakActive = false;
   int _sessionToken = 0;
   int _translatedLettersCount = 0;
 
@@ -50,6 +51,7 @@ class TranslationController extends ChangeNotifier {
   bool get isConnected => _connected;
   bool get isSessionActive => _sessionActive;
   bool get isListening => _listening;
+  bool get isAutoSpeakActive => _autoSpeakActive;
   bool get isSpeaking => _textToSpeech.isSpeaking;
   bool get isLive => _sessionActive && _listening && _connected;
   String? get activeSessionId => _repository.activeSessionId;
@@ -129,8 +131,10 @@ class TranslationController extends ChangeNotifier {
     _sessionToken++;
     _sessionActive = false;
     _listening = false;
+    _autoSpeakActive = false;
     await _subscription?.cancel();
     _subscription = null;
+    await _textToSpeech.stop();
     try {
       await _repository.stopSession();
     } catch (_) {
@@ -195,6 +199,24 @@ class TranslationController extends ChangeNotifier {
 
   Future<void> retryHistory() => loadHistory();
 
+  /// Enters continuous-TTS mode: every new incoming translation is spoken once.
+  /// Immediately speaks [_lastTranslation] if there is already text on screen.
+  Future<void> startAutoSpeak() async {
+    _autoSpeakActive = true;
+    final text = _lastTranslation.trim();
+    if (text.isNotEmpty) {
+      unawaited(_textToSpeech.speak(text, _languageCode));
+    }
+    notifyListeners();
+  }
+
+  /// Exits continuous-TTS mode and silences any in-progress speech.
+  Future<void> stopAutoSpeak() async {
+    _autoSpeakActive = false;
+    await _textToSpeech.stop();
+    notifyListeners();
+  }
+
   Future<bool> speak(String locale) async {
     final value = (_text.trim().isNotEmpty ? _text : _lastTranslation).trim();
     if (value.isEmpty) {
@@ -220,6 +242,9 @@ class TranslationController extends ChangeNotifier {
     _text = record.text;
     if (record.text.trim().isNotEmpty) {
       _lastTranslation = record.text;
+      if (_autoSpeakActive) {
+        unawaited(_textToSpeech.speak(record.text, _languageCode));
+      }
     }
     _confidence = record.confidence;
     _translatedLettersCount += record.text

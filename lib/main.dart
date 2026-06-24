@@ -9,6 +9,7 @@ import 'components/toast.dart';
 import 'components/biometric_lock_gate.dart';
 import 'app_routes.dart';
 import 'services/auth_provider.dart';
+import 'services/backend_config.dart';
 import 'services/glove_state_provider.dart';
 import 'services/preferences_provider.dart';
 import 'services/translation_controller.dart';
@@ -260,6 +261,10 @@ void main() async {
     // session still works, so the shell must still come up.
     debugPrint('Firebase initialization failed: $error\n$stackTrace');
   }
+  // Resolve the backend's actual LAN IP before any API client is created.
+  // Falls back silently to the compile-time default if the backend is unreachable.
+  await BackendConfig.instance.discover();
+
   final gloveRepository = BackendGloveRepository();
   final themeProvider = await _loadOrDefault(
     'theme',

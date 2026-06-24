@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 
+import 'backend_config.dart';
 import 'development_testing_session.dart';
 
 typedef FirebaseTokenProvider = Future<String?> Function({bool forceRefresh});
@@ -39,10 +40,9 @@ class BackendApiClient {
 
   static final instance = BackendApiClient();
 
-  static const _configuredBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
-  );
+  // Reads the URL resolved by BackendConfig.discover() (or the compile-time
+  // default if discovery was skipped / failed).
+  static String get _configuredBaseUrl => BackendConfig.instance.apiBase;
 
   final http.Client _client;
   final FirebaseTokenProvider _tokenProvider;
