@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
 
   late final AnimationController _fadeCtrl;
   late final AnimationController _arcCtrl; // ← drives the oval arc
@@ -58,8 +59,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleLogin() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    toast.info(description: 'Signing in…');
     final auth = AuthProviderScope.of(context);
     await auth.login(_emailCtrl.text.trim(), _passwordCtrl.text);
+    if (!mounted) return;
+    setState(() => _loading = false);
     // Success toast is not guarded by `mounted`: a successful login triggers a
     // router redirect to home that unmounts this screen before we get here. The
     // toast service is a global overlay, so it still surfaces after navigation.
@@ -74,8 +80,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleGoogle() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    toast.info(description: 'Signing in with Google…');
     final auth = AuthProviderScope.of(context);
     await auth.loginWithGoogle();
+    if (!mounted) return;
+    setState(() => _loading = false);
     if (auth.isLoggedIn) {
       toast.success(
         title: 'Welcome back',
@@ -314,36 +325,52 @@ class _LoginScreenState extends State<LoginScreen>
 
                           // ── Sign In button ────────────────────
                           GestureDetector(
-                            onTap: _handleLogin,
-                            child: Container(
-                              width: double.infinity,
-                              height: buttonHeight,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                  buttonRadius,
-                                ),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [t.primary, t.accent],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: t.accent.withValues(alpha: 0.35),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 5),
+                            onTap: _loading ? null : _handleLogin,
+                            child: AnimatedOpacity(
+                              opacity: _loading ? 0.75 : 1.0,
+                              duration: const Duration(milliseconds: 150),
+                              child: Container(
+                                width: double.infinity,
+                                height: buttonHeight,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    buttonRadius,
                                   ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: mainButtonTextSize,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 0.3,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [t.primary, t.accent],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: t.accent.withValues(alpha: 0.35),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
                                 ),
+                                alignment: Alignment.center,
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        'Sign In',
+                                        style: TextStyle(
+                                          fontSize: mainButtonTextSize,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
                               ),
                             ),
                           ),

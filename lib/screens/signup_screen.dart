@@ -218,41 +218,25 @@ class _SignupScreenState extends State<SignupScreen>
                                 // ── Logo + headline ─────────────
                                 Column(
                                   children: [
-                                    Transform.translate(
-                                      offset: Offset(
-                                        0,
-                                        -(screenH * 0.035).clamp(20.0, 34.0),
-                                      ),
-                                      child: Container(
-                                        width: logoSize,
-                                        height: logoSize,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            logoRadius,
-                                          ),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            logoRadius,
-                                          ),
-                                          child: Image.asset(
-                                            'assets/logo_app.png',
-                                            width: logoSize,
-                                            height: logoSize,
-                                            fit: BoxFit.scaleDown,
-                                          ),
+                                    Container(
+                                      width: logoSize,
+                                      height: logoSize,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          logoRadius,
                                         ),
                                       ),
-                                    ),
-
-                                    SizedBox(
-                                      height:
-                                          (logoToTitleGap -
-                                                  (screenH * 0.035).clamp(
-                                                    20.0,
-                                                    34.0,
-                                                  ))
-                                              .clamp(0.0, 12.0),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(
+                                          logoRadius,
+                                        ),
+                                        child: Image.asset(
+                                          'assets/logo_app.png',
+                                          width: logoSize,
+                                          height: logoSize,
+                                          fit: BoxFit.scaleDown,
+                                        ),
+                                      ),
                                     ),
 
                                     SizedBox(height: logoToTitleGap),
