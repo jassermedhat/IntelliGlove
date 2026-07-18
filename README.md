@@ -82,7 +82,7 @@ Custom ESP32-S3 wearable integrating five flex sensors and a 6-DOF IMU for real-
 ## Administration Dashboard
 
 <p align="center">
-  <img src="assets/admin_dashboard.jpeg" width="600">
+  <img src="assets/admin_dashboard.png" width="600">
 </p>
 
 <p align="center">
