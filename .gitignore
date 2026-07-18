@@ -1,34 +1,52 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.pyo
-*.pyd
+# ==============================================================================
+# IntelliGlove — .gitignore
+# Covers: Flutter/Dart, Android, iOS, Python/FastAPI, Node/React/Vite,
+#         Docker, Firebase, ML artifacts, secrets, OS, and editors
+# ==============================================================================
+
+
+# ── OS & Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
 *.swp
 *~
-.DS_Store
+*.orig
+*.bak
+
 .atom/
-.build/
-.buildlog/
 .history/
 .svn/
-.swiftpm/
-migrate_working_dir/
+.hg/
 
-# IntelliJ related
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code (workspace settings — keep if you version them, otherwise uncomment)
+# .vscode/
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/*.code-workspace
 
-# Flutter / Dart / Pub
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Vim
+*.vim
+Session.vim
+.netrwhist
+
+# Cursor / Windsurf editor
+.cursor/
+.windsurfrules
+
+
+# ── Flutter / Dart / Pub ──────────────────────────────────────────────────────
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -36,62 +54,207 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 build/
+**/doc/api/
+*.dart_snapshot
+*.dill
+.dart_tool/package_config.json
 
-# Android
+# Generated files (keep pubspec.lock in version control for reproducibility)
+# pubspec.lock  ← intentionally tracked
+
+
+# ── Android ───────────────────────────────────────────────────────────────────
 /android/.gradle/
 /android/app/build/
 /android/.cxx/
 /android/local.properties
-/android/app/debug
-/android/app/profile
-/android/app/release
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/captures/
+/android/key.properties
+*.jks
+*.keystore
 
-# iOS
+# Android signing configs (never commit keystore or signing keys)
+android/app/*.jks
+android/app/*.keystore
+
+
+# ── iOS / macOS / Xcode ───────────────────────────────────────────────────────
 /ios/Pods/
 /ios/Runner.xcworkspace/
 /ios/Flutter/Flutter.framework/
 /ios/Flutter/Flutter.podspec
 /ios/Flutter/Generated.xcconfig
 /ios/Flutter/ephemeral/
+ios/.symlinks/
+ios/Podfile.lock
 
-# Backend / Python
+/macos/Pods/
+/macos/Flutter/ephemeral/
+macos/.symlinks/
+
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xcscmblueprint
+*.moved-aside
+
+
+# ── Python / Backend / ML Service ─────────────────────────────────────────────
 **/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.pdb
 **/.pytest_cache/
+**/.pytest_tmp/
 **/.mypy_cache/
+**/.ruff_cache/
 **/.venv/
 **/venv/
+**/env/
 **/.python-version
 __pypackages__/
 pip-wheel-metadata/
+*.egg-info/
+*.egg
+dist/
+.eggs/
 
-# Node / frontend
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+
+# Alembic — keep migrations tracked, ignore nothing here
+# (no additional excludes needed)
+
+# Translation output buffer (runtime-generated, never commit)
+**/translation_output/
+translation_output/
+
+# Firebase Admin SDK service account (NEVER commit)
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+firebase_credentials.json
+service_account.json
+
+
+# ── Node / Admin Dashboard / Vite ─────────────────────────────────────────────
 **/node_modules/
 **/.npm/
+**/.yarn/
+**/.pnp/
+**/.pnp.js
 **/.next/
 **/dist/
 **/*.tsbuildinfo
+**/.turbo/
+**/.parcel-cache/
+**/.cache/
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Admin dashboard local artifacts
+# Admin dashboard specific
 admin_dashboard/dist/
 admin_dashboard/node_modules/
 admin_dashboard/.env
 !admin_dashboard/.env.example
 
-# Environment files
+# Storybook
+storybook-static/
+
+
+# ── Environment & Secrets ──────────────────────────────────────────────────────
+# Global rule: never commit .env files (allow .env.example templates)
 **/.env
+**/.env.local
+**/.env.*.local
 *.env
 *.env.local
-*.env.*.local
+*.env.production
+*.env.staging
 !**/.env.example
+!**/.env.test  # test env stubs are safe to track
 
-# Docker compose overrides
+# Specific named secret files
+.secret
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cer
+
+
+# ── Docker ────────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 docker-compose.*.local.yml
+# Keep docker-compose.yml and Dockerfiles tracked
 
-# Model artifacts
+
+# ── ML Model Artifacts ────────────────────────────────────────────────────────
+# Large binary model files — distribute via releases or DVC, not Git
 models/*.joblib
+models/*.pkl
+models/*.pickle
+models/*.h5
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.tflite
+models/*.bin
+models/*.safetensors
 models/*.labels.json
+
+# Dataset files (large — distribute separately)
+datasets/
+*.csv
+*.parquet
+*.npy
+*.npz
+*.hdf5
+*.h5
+
+
+# ── Logs & Runtime ────────────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# Crash reports
+crash.log
+crash.*.log
+
+
+# ── Misc build / temp artefacts ───────────────────────────────────────────────
+.build/
+.buildlog/
+.swiftpm/
+migrate_working_dir/
+tmp/
+temp/
+.tmp/
+*.tmp
+dir
+
+# Package manager lock files for non-primary tools (keep npm/pub locks)
+# (no exclusions here — lock files should be tracked)
+
+
+# ── Documentation (internal) ──────────────────────────────────────────────────
+docs/
