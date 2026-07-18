@@ -58,7 +58,7 @@ The following figures showcase the major components of IntelliGlove, including t
 ## Hardware Prototype
 
 <p align="center">
-  <img src="assets/screenshots/glove.jpeg" width="650">
+  <img src="assets/glove.jpeg" width="650">
 </p>
 
 <p align="center">
@@ -70,7 +70,7 @@ Custom ESP32-S3 wearable integrating five flex sensors and a 6-DOF IMU for real-
 ## Real-Time Translation
 
 <p align="center">
-  <img src="assets/screenshots/translation.jpeg" width="900">
+  <img src="assets/translation.jpeg" width="900">
 </p>
 
 <p align="center">
@@ -83,22 +83,22 @@ Live Arabic Sign Language recognition with real-time text output and optional te
 
 | Home | Device Pairing |
 |:---:|:---:|
-| <img src="assets/screenshots/home.jpeg" width="400"> | <img src="assets/screenshots/pairing.jpeg" width="400"> |
+| <img src="assets/home.jpeg" width="400"> | <img src="assets/pairing.jpeg" width="400"> |
 
 | Practice Mode | Analytics |
 |:---:|:---:|
-| <img src="assets/screenshots/practice.jpeg" width="400"> | <img src="assets/screenshots/analytics.jpeg" width="400"> |
+| <img src="assets/practice.jpeg" width="400"> | <img src="assets/analytics.jpeg" width="400"> |
 
 | Smart Home | SOS Emergency |
 |:---:|:---:|
-| <img src="assets/screenshots/smart_home.jpeg" width="400"> | <img src="assets/screenshots/sos.jpeg" width="400"> |
+| <img src="assets/smart_home.jpeg" width="400"> | <img src="assets/sos.jpeg" width="400"> |
 
 ---
 
 ## Administration Dashboard
 
 <p align="center">
-  <img src="assets/screenshots/admin_dashboard.jpeg" width="850">
+  <img src="assets/admin_dashboard.jpeg" width="850">
 </p>
 
 <p align="center">
