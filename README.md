@@ -69,21 +69,13 @@ Custom ESP32-S3 wearable integrating five flex sensors and a 6-DOF IMU for real-
 
 ## Flutter Mobile Application
 
-| Real-Time Translation | Home |
-|:---:|:---:|
-| <img src="assets/translation.jpeg" width="240"> | <img src="assets/home.jpeg" width="240"> |
+| Real-Time Translation | Home | Device Pairing | Practice Mode |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/translation.jpeg" width="180"> | <img src="assets/home.jpeg" width="180"> | <img src="assets/pairing.jpeg" width="180"> | <img src="assets/practice.jpeg" width="180"> |
 
-| Device Pairing | Practice Mode |
-|:---:|:---:|
-| <img src="assets/pairing.jpeg" width="240"> | <img src="assets/practice.jpeg" width="240"> |
-
-| Analytics | Smart Home |
-|:---:|:---:|
-| <img src="assets/analytics.jpeg" width="240"> | <img src="assets/smart_home.jpeg" width="240"> |
-
-| SOS Emergency | |
-|:---:|:---:|
-| <img src="assets/sos.jpeg" width="240"> | |
+| Analytics | Smart Home | SOS Emergency | Health Monitoring |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/analytics.jpeg" width="180"> | <img src="assets/smart_home.jpeg" width="180"> | <img src="assets/sos.jpeg" width="180"> | <img src="assets/health.jpeg" width="180"> |
 
 ---
 
