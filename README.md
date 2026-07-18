@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo_app.png" alt="IntelliGlove" width="108" />
+<img src="assets/logo_app.jpeg" alt="IntelliGlove" width="108" />
 
 # IntelliGlove
 
@@ -48,6 +48,62 @@ The system makes three contributions:
 - Firebase Authentication
 - Dockerized deployment
 - Standalone ML inference microservice
+
+---
+
+# IntelliGlove in Action
+
+The following figures showcase the major components of IntelliGlove, including the wearable hardware, the real-time translation interface, the Flutter application, and the React administration dashboard.
+
+## Hardware Prototype
+
+<p align="center">
+  <img src="assets/screenshots/glove.jpeg" width="650">
+</p>
+
+<p align="center">
+Custom ESP32-S3 wearable integrating five flex sensors and a 6-DOF IMU for real-time Arabic Sign Language acquisition.
+</p>
+
+---
+
+## Real-Time Translation
+
+<p align="center">
+  <img src="assets/screenshots/translation.jpeg" width="900">
+</p>
+
+<p align="center">
+Live Arabic Sign Language recognition with real-time text output and optional text-to-speech.
+</p>
+
+---
+
+## Flutter Application
+
+| Home | Device Pairing |
+|:---:|:---:|
+| <img src="assets/screenshots/home.jpeg" width="400"> | <img src="assets/screenshots/pairing.jpeg" width="400"> |
+
+| Practice Mode | Analytics |
+|:---:|:---:|
+| <img src="assets/screenshots/practice.jpeg" width="400"> | <img src="assets/screenshots/analytics.jpeg" width="400"> |
+
+| Smart Home | SOS Emergency |
+|:---:|:---:|
+| <img src="assets/screenshots/smart_home.jpeg" width="400"> | <img src="assets/screenshots/sos.jpeg" width="400"> |
+
+---
+
+## Administration Dashboard
+
+<p align="center">
+  <img src="assets/screenshots/admin_dashboard.jpeg" width="850">
+</p>
+
+<p align="center">
+Administration interface for user management, translation monitoring, model deployment, audit logging, and system configuration.
+</p>
 
 ---
 
