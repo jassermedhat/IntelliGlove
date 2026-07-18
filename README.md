@@ -65,7 +65,7 @@ The system makes three contributions:
 - [Testing & CI](#testing--ci)
 - [Security](#security)
 - [Limitations & Research Roadmap](#limitations--research-roadmap)
-- [Project Team](#project-team)
+- [Project Team](#team-members)
 - [Citation](#citation)
 
 ---
@@ -824,36 +824,28 @@ flutter:    flutter test (Flutter 3.32.8, stable channel)
 
 ---
 
-## Contributors
+## Project Team
 
-<div align="center">
+IntelliGlove was developed through a collaborative effort by a multidisciplinary AI Engineering team.
 
-<table>
-  <tr>
-    <td align="center">👤<br/><b>Ahmed Amir Rusrus</b></td>
-    <td align="center">👤<br/><b>Jasser Medhat Mohamed</b></td>
-    <td align="center">👤<br/><b>Mahmoud Elsamnii</b></td>
-    <td align="center">👤<br/><b>Monica Nabil Mikhael</b></td>
-  </tr>
-  <tr>
-    <td align="center">👤<br/><b>Shahd Saied Gedawy</b></td>
-    <td align="center">👤<br/><b>Yasmin Walid Abou El-Saad</b></td>
-    <td align="center">👤<br/><b>Youssef Raafat El-Baz</b></td>
-    <td></td>
-  </tr>
-</table>
+| Team Members |
+|---------------|
+| Ahmed Amir Rusrus |
+| Jasser Medhat Mohamed |
+| Mahmoud Elsamnii |
+| Monica Nabil Mikhael |
+| Shahd Saied Gedawy |
+| Yasmin Walid Abou El-Saad |
+| Youssef Raafat El-Baz |
 
-</div>
+### Academic Supervision
 
-### 🎓 Supervised By
+This work was completed under the supervision of:
 
-<div align="center">
-
-| | |
-|:---:|:---:|
-| **Dr. Ahmed El-Shaer** | **Eng. Ahmed Métwall** |
-
-</div>
+| Supervisor |
+|------------|
+| **Dr. Ahmed El-Shaer** |
+| **Eng. Ahmed Métwall** |
 
 ---
 
