@@ -216,6 +216,20 @@ The ML inference service (`python_ml_service/`) accepts `.joblib` files in two f
 
 The `ModelRegistry` checks `mtime_ns` on each call and reloads from disk only when the artifact has changed — enabling zero-downtime model hot-swaps without restarting the service.
 
+**Pre-flight validation** (run before registering any artifact):
+
+```python
+import joblib
+b = joblib.load("arsl_v1.joblib")
+m = b["model"] if isinstance(b, dict) else b
+assert callable(getattr(m, "predict_proba", None)) and hasattr(m, "classes_")
+probs = m.predict_proba([[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1]])[0]
+print("classes:", list(m.classes_))
+print("top-1  :", m.classes_[probs.argmax()])
+```
+
+> **Version pinning**: The ML service targets **scikit-learn 1.7.0 + joblib 1.5.1** (`python_ml_service/requirements.txt`). Pickled sklearn estimators are not guaranteed to load across minor versions — train and export with the same versions.
+
 ---
 
 ## Software Architecture
@@ -224,64 +238,116 @@ The `ModelRegistry` checks `mtime_ns` on each call and reloads from disk only wh
 
 The system follows a **four-layer distributed architecture** aligned with the separation between physical sensing, embedded processing, server-side inference, and user-facing applications:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Layer 1 — Sensing                                               │
-│  ESP32-S3 glove: 5× flex sensors + MPU-6050 IMU                 │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ 13-channel sensor frames (BLE / Wi-Fi)
-┌───────────────────────────▼─────────────────────────────────────┐
-│  Layer 2 — Embedded                                              │
-│  Firmware: ADC digitisation → preprocessing → wireless TX        │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ per-session JSON file (integration contract)
-┌───────────────────────────▼─────────────────────────────────────┐
-│  Layer 3 — Processing                                            │
-│  FastAPI backend (port 8000)                                     │
-│    ├── Ingestion watcher: ~1 s JSON polling → PostgreSQL + WS   │
-│    ├── ML client: POST /predict → ML service (port 8080)         │
-│    └── WebSocket hub: one persistent WS per firebase_uid         │
-│  ML inference service (port 8080, internal only)                 │
-│    └── Extra Trees .joblib, hot-reload on mtime change           │
-│  PostgreSQL 16 — 13 tables, Alembic migrations                   │
-└─────────┬────────────────────────────────────────────────────────┘
-          │ REST + WebSocket (local network / Firebase Bearer token)
-┌─────────▼────────────────────────────────────────────────────────┐
-│  Layer 4 — Application                                           │
-│  Flutter mobile app (27 screens, Android + iOS)                  │
-│  React admin dashboard (Vite + TypeScript, port 5173)            │
-│  Firebase Authentication (sole cloud dependency)                  │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph L1["Layer 1 — Sensing"]
+        GLOVE["IntelliGlove Glove\n5× Flex Sensors + MPU-6050\nESP32-S3 MCU · BLE / Wi-Fi"]
+    end
+
+    subgraph L2["Layer 2 — Embedded"]
+        FW["Glove Firmware\nADC digitisation\nSignal preprocessing\nWireless transmission"]
+    end
+
+    subgraph L3["Layer 3 — Processing"]
+        API["FastAPI Backend\nport 8000 · REST + WebSocket"]
+        INGEST["Ingestion Watcher\nJSON file polling ~1s"]
+        ML["ML Inference Service\nport 8080 · Extra Trees .joblib"]
+        PG["PostgreSQL 16\n13 tables · Alembic migrations"]
+    end
+
+    subgraph L4["Layer 4 — Application"]
+        APP["Flutter Mobile App\n27 screens · Android + iOS"]
+        DASH["React Admin Dashboard\nVite + TypeScript · port 5173"]
+        FB["Firebase Auth\nsole cloud dependency"]
+    end
+
+    GLOVE --> FW
+    FW -->|"13-channel sensor frames"| INGEST
+    INGEST -->|"INSERT translation_history"| PG
+    INGEST -->|"WebSocket push"| APP
+    API -->|"POST /predict · X-Internal-API-Key"| ML
+    API --> PG
+    APP -->|"REST + WS · Firebase ID Token"| API
+    DASH -->|"admin REST"| API
+    FB -->|"ID Token verification"| API
 ```
 
 ### Integration Contract
 
 The boundary between the embedded layer and the processing layer is a **per-session JSON file**. The backend's ingestion watcher polls `TRANSLATION_JSON_DIR/{session_id}.json` at ~1 second intervals, detects newly appended entries, persists them to `translation_history`, and pushes each entry to the user's open WebSocket. This design deliberately decouples the firmware and ML inference internals from the server-side platform: any process that writes to the file — the glove firmware, a BLE relay script, or the admin Seed Tool — is a valid producer.
 
+**JSON file structure** (one file per active session, entries appended as array elements):
+
+```json
+[
+  { "text": "ب",  "timestamp": "2026-06-21T10:15:03.120Z", "gestureLabel": "Ba",  "confidence": 0.97, "modelId": "arsl_v1-ab12cd34ef56" },
+  { "text": "ت",  "timestamp": "2026-06-21T10:15:04.900Z", "gestureLabel": "Ta",  "confidence": 0.94, "modelId": "arsl_v1-ab12cd34ef56" },
+  { "text": "ث",  "timestamp": "2026-06-21T10:15:06.310Z", "gestureLabel": "Tha", "confidence": 0.91, "modelId": "arsl_v1-ab12cd34ef56" }
+]
+```
+
+- `text` — the display text shown to the user (mapped via `labels` dict)
+- `timestamp` — ISO 8601 UTC, when the gesture was recognised
+- `gestureLabel`, `confidence`, `modelId` — model metadata (optional; absent in admin/seed entries)
+
+The backend **creates** the file as `[]` on `POST /sessions/start` and **deletes** it after the final DB commit on `POST /sessions/{id}/stop`. The database row is the authoritative durable record; the file is only the live ingestion buffer.
+
 ### Translation Session Lifecycle
 
-```
-POST /sessions/start
-  └─▶ create {session_id}.json
-  └─▶ asyncio.create_task(SessionWatcher)
-  └─▶ return { sessionId }
+```mermaid
+sequenceDiagram
+    participant A as Flutter App
+    participant API as FastAPI Backend
+    participant J as JSON File
+    participant W as SessionWatcher
+    participant DB as PostgreSQL
+    participant WH as WebSocket Hub
 
-SessionWatcher (background task, ~1 s interval)
-  └─▶ poll JSON file
-  └─▶ detect new entries
-  └─▶ INSERT translation_history
-  └─▶ WebSocket push to uid subscriber
+    A->>API: POST /sessions/start
+    API->>J: create {session_id}.json = []
+    API->>W: asyncio.create_task(watcher)
+    API-->>A: { sessionId, sessionNumber }
+    A->>WH: WS /ws/translation/{uid}
 
-POST /sessions/{id}/stop
-  └─▶ cancel watcher task
-  └─▶ flush remaining entries → DB
-  └─▶ delete JSON file
-  └─▶ close session record
+    loop Live translation (~1 s poll)
+        Note over J: Glove / BLE relay appends entry
+        W->>J: poll file
+        W->>DB: INSERT translation_history
+        W->>WH: push latest entry
+        WH-->>A: { type:"translation", translatedText, confidence }
+    end
+
+    A->>API: POST /sessions/{id}/stop
+    API->>W: cancel watcher task
+    API->>DB: flush remaining + close session
+    API->>J: delete file
+    API-->>A: session summary
 ```
 
 ### Authentication
 
 Every non-public request carries a **Firebase ID token** (`Authorization: Bearer`). The backend verifies it with the Firebase Admin SDK on each request. The token's `uid` claim is used as the primary key to look up the corresponding PostgreSQL `users` row.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant APP as Flutter App
+    participant FB as Firebase Auth
+    participant BE as FastAPI Backend
+
+    U->>APP: Email + Password (or Google OAuth)
+    APP->>FB: signInWithEmailAndPassword()
+    FB-->>APP: Firebase User + ID Token
+
+    APP->>BE: POST /api/v1/auth/sync
+    Note over APP,BE: Authorization: Bearer {idToken}
+    BE->>FB: Firebase Admin SDK verify(idToken)
+    FB-->>BE: { uid, email, email_verified }
+    BE->>BE: upsert users row (PostgreSQL)
+    BE-->>APP: { data: { id, name, email, role } }
+
+    Note over APP,BE: All subsequent requests carry Bearer token
+```
 
 Two separate dependency functions enforce access tiers:
 - `get_current_user` — validates token, returns `User` ORM object
@@ -289,9 +355,148 @@ Two separate dependency functions enforce access tiers:
 
 The WebSocket endpoint performs a token-challenge handshake with a 10-second timeout before accepting the connection, and validates that the `uid` in the URL path matches the token's `uid` claim.
 
+### ML Inference Pipeline
+
+The ML service is internal-only. The Flutter app never contacts it directly; the backend is the sole HTTP caller, authenticated with `X-Internal-API-Key`.
+
+```
+  ┌─────────┐  sensor frames   ┌───────────────┐  POST /predict       ┌──────────────────┐
+  │  Glove  │ ───────────────► │   Backend     │ ───────────────────► │  ML service      │
+  │ (BLE)   │  (JSON file)     │  (FastAPI)    │  X-Internal-API-Key  │ python_ml_service│
+  └─────────┘                  │  port 8000    │ ◄─────────────────── │  port 8080       │
+       │                       └───────┬───────┘  { translatedText,   │  loads .joblib   │
+       │  Flutter App                  │            gestureLabel,      └──────────────────┘
+       │  (phone)                      │            confidence }              │
+       │                               │                                      │ reads (ro)
+       ▼                               ▼                                      ▼
+  ┌─────────────┐  WebSocket    ┌───────────┐                          ┌──────────┐
+  │  translate  │ ◄──────────── │ Postgres  │                          │ models/  │
+  │  screen     │  live entries │ history   │                          │ *.joblib │
+  └─────────────┘               └───────────┘                          └──────────┘
+```
+
+**`POST /predict` contract** (ML service, port 8080):
+
+```json
+// Request  (header: X-Internal-API-Key: <key>)
+{
+  "modelPath": "arsl_v1.joblib",
+  "rawSensorData": {
+    "flex1": 0.1, "flex2": 0.2, "flex3": 0.3, "flex4": 0.4, "flex5": 0.5,
+    "accelX": 0.6, "accelY": 0.7, "accelZ": 0.8,
+    "gyroX":  0.9, "gyroY": 1.0, "gyroZ":  1.1
+  }
+}
+
+// Response
+{
+  "translatedText": "ب",
+  "gestureLabel":   "Ba",
+  "confidence":     0.9412,
+  "modelPath":      "arsl_v1.joblib"
+}
+```
+
+**`POST /validate` contract** (used during admin model registration):
+
+```json
+// Request
+{ "modelPath": "arsl_v1.joblib" }
+
+// Response
+{ "valid": true, "modelPath": "arsl_v1.joblib", "classes": ["Alef","Ba","Ta",...], "labels": {"Ba":"ب"} }
+```
+
 ### Admin Architecture
 
 The admin API uses a **hub-and-spoke router pattern**. A parent `APIRouter` at `/admin` includes four sub-routers as separate files (`admin_config_routes`, `admin_user_routes`, `admin_translation_routes`, `admin_seed_routes`). New administrative concerns are added as new files; the hub file is never modified. All admin actions are persisted to `audit_logs` with actor identity, action type, target, and a before/after details payload.
+
+### Database Schema
+
+13 PostgreSQL tables managed by Alembic with full migration history:
+
+```mermaid
+erDiagram
+    users {
+        UUID id PK
+        string firebase_uid UK
+        string email UK
+        string name
+        string role
+        bool email_verified
+        string status
+    }
+    devices {
+        UUID id PK
+        UUID user_id FK
+        string device_name
+        string hardware_id UK
+        string connection_status
+        int battery_level
+        int signal_strength
+        string firmware_version
+    }
+    sessions {
+        UUID id PK
+        string session_id UK
+        UUID user_id FK
+        UUID device_id FK
+        string status
+        int translated_letters_count
+        float average_confidence
+    }
+    translation_history {
+        UUID id PK
+        UUID session_id FK
+        UUID user_id FK
+        UUID device_id FK
+        jsonb raw_input
+        text translated_text
+        string gesture_label
+        float confidence
+        UUID model_id FK
+    }
+    models {
+        UUID id PK
+        string model_id UK
+        string file_path UK
+        string version
+        string status
+        bool is_active
+        jsonb metadata
+    }
+    admin_config {
+        UUID id PK
+        string system_status
+        UUID active_model_id FK
+        jsonb service_toggles
+    }
+    analytics_data { UUID id PK }
+    practice_signs { UUID id PK }
+    practice_mode_data { UUID id PK }
+    health_monitor_data { UUID id PK }
+    smart_house_data { UUID id PK }
+    feedback_reports { UUID id PK }
+    audit_logs { UUID id PK }
+
+    users ||--o{ devices : owns
+    users ||--o{ sessions : initiates
+    sessions ||--o{ translation_history : contains
+    models ||--o{ translation_history : produced_by
+    admin_config }o--|| models : active_model
+```
+
+### Model Deployment Workflow
+
+```mermaid
+flowchart LR
+    A["1. Place .joblib\nin models/"] --> B["2. Admin Dashboard\nSystem & Models"]
+    B --> C["3. POST /admin/models\nregister record"]
+    C --> D["4. Validate\nPOST /admin/models/{id}/validate"]
+    D --> E["5. Activate\nPOST /admin/models/{id}/activate\n⚠ system must be OFF"]
+    E --> F["6. Toggle system ON\nPATCH /admin/config/system-status"]
+    F --> G["✅ Live translation active\nAll /ml/translate calls\nroute through active model"]
+```
 
 ---
 
@@ -619,28 +824,36 @@ flutter:    flutter test (Flutter 3.32.8, stable channel)
 
 ---
 
-## Project Team
+## Contributors
 
-IntelliGlove was developed through a collaborative effort by a multidisciplinary AI Engineering team.
+<div align="center">
 
-| Team Members |
-|---------------|
-| Ahmed Amir Rusrus |
-| Jasser Medhat Mohamed |
-| Mahmoud Elsamnii |
-| Monica Nabil Mikhael |
-| Shahd Saied Gedawy |
-| Yasmin Walid Abou El-Saad |
-| Youssef Raafat El-Baz |
+<table>
+  <tr>
+    <td align="center">👤<br/><b>Ahmed Amir Rusrus</b></td>
+    <td align="center">👤<br/><b>Jasser Medhat Mohamed</b></td>
+    <td align="center">👤<br/><b>Mahmoud Elsamnii</b></td>
+    <td align="center">👤<br/><b>Monica Nabil Mikhael</b></td>
+  </tr>
+  <tr>
+    <td align="center">👤<br/><b>Shahd Saied Gedawy</b></td>
+    <td align="center">👤<br/><b>Yasmin Walid Abou El-Saad</b></td>
+    <td align="center">👤<br/><b>Youssef Raafat El-Baz</b></td>
+    <td></td>
+  </tr>
+</table>
 
-### Academic Supervision
+</div>
 
-This work was completed under the supervision of:
+### 🎓 Supervised By
 
-| Supervisor |
-|------------|
-| **Dr. Ahmed El-Shaer** |
-| **Eng. Ahmed Métwall** |
+<div align="center">
+
+| | |
+|:---:|:---:|
+| **Dr. Ahmed El-Shaer** | **Eng. Ahmed Métwall** |
+
+</div>
 
 ---
 
@@ -661,11 +874,19 @@ This work was completed under the supervision of:
 
 ## Citation
 
-If you use IntelliGlove in academic research, please cite the associated publication when it becomes available.
+If you use the IntelliGlove dataset, classifier, or software platform in your research, please cite:
 
-Until then, please reference this GitHub repository.
-
-A `CITATION.cff` file will be added once the accompanying research publication is publicly available.
+```bibtex
+@thesis{intelliglove2026,
+  title     = {IntelliGlove: Wearable Arabic Sign Language Recognition System},
+  author    = {Rusrus, Ahmed Amir and Mohamed, Jasser Medhat and Elsamnii, Mahmoud
+               and Mikhael, Monica Nabil and Gedawy, Shahd Saied
+               and Abou El-Saad, Yasmin Walid and El-Baz, Youssef Raafat},
+  year      = {2026},
+  type      = {Graduation Project Thesis},
+  note      = {Supervised by Dr. Ahmed El-Shaer and Eng. Ahmed Métwall}
+}
+```
 
 ---
 
