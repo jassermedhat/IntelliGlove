@@ -53,12 +53,12 @@ The system makes three contributions:
 
 # IntelliGlove in Action
 
-The following figures showcase the major components of IntelliGlove, including the wearable hardware, the real-time translation interface, the Flutter application, and the React administration dashboard.
+The following figures highlight the key components of IntelliGlove, including the wearable hardware, the Flutter mobile application, and the React administration dashboard.
 
 ## Hardware Prototype
 
 <p align="center">
-  <img src="assets/glove.jpeg" width="650">
+  <img src="assets/glove.jpeg" width="420">
 </p>
 
 <p align="center">
@@ -67,42 +67,34 @@ Custom ESP32-S3 wearable integrating five flex sensors and a 6-DOF IMU for real-
 
 ---
 
-## Real-Time Translation
+## Flutter Mobile Application
 
-<p align="center">
-  <img src="assets/translation.jpeg" width="900">
-</p>
-
-<p align="center">
-Live Arabic Sign Language recognition with real-time text output and optional text-to-speech.
-</p>
-
----
-
-## Flutter Application
-
-| Home | Device Pairing |
+| Real-Time Translation | Home |
 |:---:|:---:|
-| <img src="assets/home.jpeg" width="400"> | <img src="assets/pairing.jpeg" width="400"> |
+| <img src="assets/translation.jpeg" width="240"> | <img src="assets/home.jpeg" width="240"> |
 
-| Practice Mode | Analytics |
+| Device Pairing | Practice Mode |
 |:---:|:---:|
-| <img src="assets/practice.jpeg" width="400"> | <img src="assets/analytics.jpeg" width="400"> |
+| <img src="assets/pairing.jpeg" width="240"> | <img src="assets/practice.jpeg" width="240"> |
 
-| Smart Home | SOS Emergency |
+| Analytics | Smart Home |
 |:---:|:---:|
-| <img src="assets/smart_home.jpeg" width="400"> | <img src="assets/sos.jpeg" width="400"> |
+| <img src="assets/analytics.jpeg" width="240"> | <img src="assets/smart_home.jpeg" width="240"> |
+
+| SOS Emergency | |
+|:---:|:---:|
+| <img src="assets/sos.jpeg" width="240"> | |
 
 ---
 
 ## Administration Dashboard
 
 <p align="center">
-  <img src="assets/admin_dashboard.jpeg" width="850">
+  <img src="assets/admin_dashboard.jpeg" width="600">
 </p>
 
 <p align="center">
-Administration interface for user management, translation monitoring, model deployment, audit logging, and system configuration.
+Centralized management interface for users, devices, translation sessions, machine learning models, audit logs, and system configuration.
 </p>
 
 ---
